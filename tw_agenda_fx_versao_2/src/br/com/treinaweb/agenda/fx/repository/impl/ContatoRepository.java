@@ -7,7 +7,7 @@ import br.com.treinaweb.agenda.entidades.Contato;
 //import br.com.treinaweb.agenda.fx.entidades.Contat;
 import br.com.treinaweb.agenda.fx.repository.interfaces.AgendaRepository;
 
-
+// metodo foi feito pra armazenar sem o bd
 public class ContatoRepository implements AgendaRepository<Contato> {
 
 	private static List<Contato> contatos = new ArrayList<Contato>();

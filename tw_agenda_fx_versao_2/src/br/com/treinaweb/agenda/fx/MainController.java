@@ -6,8 +6,7 @@ import java.util.Optional;
 import java.util.ResourceBundle;
 
 import br.com.treinaweb.agenda.entidades.Contato;
-//import br.com.treinaweb.agenda.fx.entidades.Contat;
-import br.com.treinaweb.agenda.fx.repository.impl.ContatoRepository;
+import br.com.treinaweb.agenda.fx.repository.impl.ContatoRepositoryJdbc;
 import br.com.treinaweb.agenda.fx.repository.interfaces.AgendaRepository;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -48,10 +47,10 @@ public class MainController implements Initializable {
 	private TextField txIdade;
 	@FXML
 	private TextField txTelefone;
-	
+
 	private Boolean ehInserir;
 	private Contato contatoSelecionado;
-	
+
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
 		this.tabelaContatos.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
@@ -67,87 +66,122 @@ public class MainController implements Initializable {
 //				}
 //			}
 //		});
-		
-		tabelaContatos.getSelectionModel().selectedItemProperty().addListener((observador, contatoAntigo, contatoNovo)-> {
-			if (contatoNovo != null) {
-				txNome.setText(contatoNovo.getNome());
-				txIdade.setText(String.valueOf(contatoNovo.getIdade()));
-				txTelefone.setText(contatoNovo.getTelefone());
-				contatoSelecionado = contatoNovo;
-			}
-				
-		});
+
+		tabelaContatos.getSelectionModel().selectedItemProperty()
+				.addListener((observador, contatoAntigo, contatoNovo) -> {
+					if (contatoNovo != null) {
+						txNome.setText(contatoNovo.getNome());
+						txIdade.setText(String.valueOf(contatoNovo.getIdade()));
+						txTelefone.setText(contatoNovo.getTelefone());
+						contatoSelecionado = contatoNovo;
+					}
+
+				});
+
 		preencherTabela();
 	}
-	
-	public void botaoInserir_Action(){
+
+	public void botaoInserir_Action() {
 		this.ehInserir = true;
 		txNome.setText("");
 		txIdade.setText("");
 		txTelefone.setText("");
 		habilitarEdicaoAgenda(true);
-		
+
 	}
-	
-	public void botaoAlterar_Action(){
+
+	public void botaoAlterar_Action() {
 		habilitarEdicaoAgenda(true);
 		ehInserir = false;
 		txNome.setText(contatoSelecionado.getNome());
 		txIdade.setText(Integer.toString(contatoSelecionado.getIdade()));
 		txTelefone.setText(contatoSelecionado.getTelefone());
+
 	}
-	
-	public void botaoExcluir_Action(){
+
+	public void botaoExcluir_Action() {
 		Alert confirmacao = new Alert(AlertType.CONFIRMATION);
 		confirmacao.setTitle("Confirmação");
 		confirmacao.setHeaderText("Confirmação de exclusão do contato");
 		confirmacao.setContentText("Tem certeza que deseja excluir este contato? ");
 		Optional<ButtonType> resultadoConfirmacao = confirmacao.showAndWait();
-		if(resultadoConfirmacao.isPresent() && resultadoConfirmacao.get() == ButtonType.OK) {
-		
-		
-		AgendaRepository<Contato> repositoryContato  = new ContatoRepository();
-		repositoryContato.excluir(contatoSelecionado);
-		preencherTabela();
-		tabelaContatos.getSelectionModel().selectFirst();
+		if (resultadoConfirmacao.isPresent() && resultadoConfirmacao.get() == ButtonType.OK) {
+			try {
+				AgendaRepository<Contato> repositoryContato = new ContatoRepositoryJdbc();
+				Contato contato = new Contato();
+				contato.setId(contatoSelecionado.getId());
+				repositoryContato.excluir(contatoSelecionado);
+				preencherTabela();
+				tabelaContatos.getSelectionModel().selectFirst();
+			} catch (Exception e) {
+
+				Alert mensagem = new Alert(AlertType.ERROR);
+				mensagem.setTitle("Erro!");
+				mensagem.setHeaderText("Erro ao Deletar");
+				mensagem.setContentText("Houve um erro ao deletar o contato:  " + e.getMessage());
+				mensagem.showAndWait();
+
+			}
 		}
 	}
-	
+
 	public void botaoCancelar_Action() {
 		habilitarEdicaoAgenda(false);
 		tabelaContatos.getSelectionModel().selectFirst();
 	}
-	
-	public void botaoSalvar_Action(){
-		AgendaRepository<Contato> repositorioContato = new ContatoRepository();
-		Contato contato = new Contato();
-		contato.setNome(txNome.getText());
-		contato.setIdade(Integer.parseInt(txIdade.getText()));
-		contato.setTelefone(txTelefone.getText());
-		if(ehInserir) {
-			repositorioContato.inserir(contato);
-		}else {
-			repositorioContato.atualizar(contato);
+
+	public void botaoSalvar_Action() {
+		try {
+			AgendaRepository<Contato> repositorioContato = new ContatoRepositoryJdbc();
+			Contato contato = new Contato();
+			contato.setNome(txNome.getText());
+			contato.setIdade(Integer.parseInt(txIdade.getText()));
+			contato.setTelefone(txTelefone.getText());
+			if (ehInserir) {
+				repositorioContato.inserir(contato);
+			} else {
+				contato.setId(contatoSelecionado.getId());
+				repositorioContato.atualizar(contato);
+			}
+			habilitarEdicaoAgenda(false);
+			preencherTabela();
+			tabelaContatos.getSelectionModel().selectFirst();
+
+		} catch (Exception e) {
+
+			Alert mensagem = new Alert(AlertType.ERROR);
+			mensagem.setTitle("Erro!");
+			mensagem.setHeaderText("Erro ao salvar");
+			mensagem.setContentText("Houve um erro ao salvar o contato:  " + e.getMessage());
+			mensagem.showAndWait();
+
 		}
-		habilitarEdicaoAgenda(false);
-		preencherTabela();
-		tabelaContatos.getSelectionModel().selectFirst();
-		}		
+	}
 
 	private void preencherTabela() {
-		AgendaRepository<Contato> repositoryContato = new ContatoRepository();
-		List<Contato> contatos = repositoryContato.selecionar();
-		if (contatos.isEmpty()) {
-			Contato contato = new Contato();
-			contato.setNome("Teste Nome");
-			contato.setIdade(22);
-			contato.setTelefone("11233335552");
-			contatos.add(contato);
+		try {
+			AgendaRepository<Contato> repositoryContato = new ContatoRepositoryJdbc();
+			List<Contato> contatos;
+			contatos = repositoryContato.selecionar();
+			if (contatos.isEmpty()) {
+				Contato contato = new Contato();
+				contato.setNome("");
+				contato.setIdade(0);
+				contato.setTelefone("");
+				contatos.add(contato);
+			}
+
+			ObservableList<Contato> contatosObservableList = FXCollections.observableArrayList(contatos);
+			tabelaContatos.getItems().setAll(contatosObservableList);
+
+		} catch (Exception e) {
+
+			Alert mensagem = new Alert(AlertType.ERROR);
+			mensagem.setTitle("Erro!");
+			mensagem.setHeaderText("Erro no banco de dados");
+			mensagem.setContentText("Houve um erro ao obter a lista de contatos:  " + e.getMessage());
+			mensagem.showAndWait();
 		}
-
-		ObservableList<Contato> contatosObservableList = FXCollections.observableArrayList(contatos);
-		tabelaContatos.getItems().setAll(contatosObservableList);
-
 	}
 
 	private void habilitarEdicaoAgenda(Boolean edicaoHabilitado) {
