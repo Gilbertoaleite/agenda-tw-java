@@ -99,6 +99,7 @@
                   <Insets left="4.0" />
                </GridPane.margin>
             </Button>
+            <Label text="By: Gilbertoaleite" GridPane.rowIndex="2" />
          </children>
       </GridPane>
    </children>
